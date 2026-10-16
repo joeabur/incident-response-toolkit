@@ -6,8 +6,12 @@ BeforeAll {
     $null = New-Item -ItemType Directory $script:Tmp
     $script:Case = Join-Path $script:Root 'sample-data\case-001'
     function script:Run-Cli([string[]]$CliArgs) {
+        # Windows PowerShell 5.1 turns native stderr into error records, which
+        # terminate under the Stop preference Pester sets; keep them as text.
+        $ErrorActionPreference = 'Continue'
         $out = & $script:Shell -NoProfile -NonInteractive -File $script:Script @CliArgs 2>&1
-        [pscustomobject]@{ ExitCode = $LASTEXITCODE; Output = ($out | Out-String) }
+        $code = $LASTEXITCODE
+        [pscustomobject]@{ ExitCode = $code; Output = (($out | ForEach-Object { "$_" }) -join "`n") }
     }
 }
 

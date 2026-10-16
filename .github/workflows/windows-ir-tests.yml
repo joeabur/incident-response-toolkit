@@ -23,11 +23,15 @@ jobs:
           persist-credentials: false
       - name: Install PSScriptAnalyzer
         shell: pwsh
-        run: Install-Module PSScriptAnalyzer -Scope CurrentUser -Force
+        run: |
+          foreach ($i in 1..3) {
+            try { Install-Module PSScriptAnalyzer -Repository PSGallery -Scope CurrentUser -Force -ErrorAction Stop; break }
+            catch { if ($i -eq 3) { throw }; Start-Sleep -Seconds (10 * $i) }
+          }
       - name: Lint
         shell: pwsh
         run: |
-          $r = Invoke-ScriptAnalyzer -Path ./src, ./scripts -Recurse -Settings ./PSScriptAnalyzerSettings.psd1
+          $r = foreach ($p in './src', './scripts') { Invoke-ScriptAnalyzer -Path $p -Recurse -Settings ./PSScriptAnalyzerSettings.psd1 }
           $r | Format-Table -AutoSize
           if (@($r | Where-Object Severity -in 'Error', 'Warning').Count -gt 0) { exit 1 }
 
@@ -40,7 +44,11 @@ jobs:
           persist-credentials: false
       - name: Install Pester 5
         shell: powershell
-        run: Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+        run: |
+          foreach ($i in 1..3) {
+            try { Install-Module Pester -Repository PSGallery -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop; break }
+            catch { if ($i -eq 3) { throw }; Start-Sleep -Seconds (10 * $i) }
+          }
       - name: Unit and integration tests
         shell: powershell
         run: |
@@ -67,7 +75,11 @@ jobs:
           persist-credentials: false
       - name: Install Pester 5
         shell: pwsh
-        run: Install-Module Pester -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck
+        run: |
+          foreach ($i in 1..3) {
+            try { Install-Module Pester -Repository PSGallery -MinimumVersion 5.5.0 -Scope CurrentUser -Force -SkipPublisherCheck -ErrorAction Stop; break }
+            catch { if ($i -eq 3) { throw }; Start-Sleep -Seconds (10 * $i) }
+          }
       - name: Unit and integration tests
         shell: pwsh
         run: |

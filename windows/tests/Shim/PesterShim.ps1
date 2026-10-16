@@ -67,7 +67,7 @@ function Should {
             $threw = $false; $msg = ''
             try { & $actual | Out-Null } catch { $threw = $true; $msg = $_.Exception.Message }
             $pattern = if ($ExpectedMessage) { $ExpectedMessage } else { $Expected }
-            $ok = $threw -and (-not $pattern -or $msg -like "*$pattern*")
+            $ok = $threw -and (-not $pattern -or $msg -like $pattern)   # Pester semantics: -like, wildcards must be explicit
             $desc = "expected a throw$(if ($pattern) { " matching '$pattern'" }); threw=$threw message='$msg'"
         }
         elseif ($Be) { $ok = ($actual -eq $Expected); $desc = "expected '$Expected' but got '$actual'" }

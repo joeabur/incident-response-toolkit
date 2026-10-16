@@ -112,7 +112,7 @@ Describe 'Rule validation' {
         try {
             $one = script:Rule @{}
             Set-Content (Join-Path $dir 'a.json') (@{ rules = @($one, $one) } | ConvertTo-Json -Depth 8)
-            { Import-IRRule -Path $dir } | Should -Throw 'duplicate'
+            { Import-IRRule -Path $dir } | Should -Throw '*duplicate*'
             Set-Content (Join-Path $dir 'a.json') '{ nope'
             { Import-IRRule -Path $dir } | Should -Throw
             Set-Content (Join-Path $dir 'a.json') '{ "other": 1 }'

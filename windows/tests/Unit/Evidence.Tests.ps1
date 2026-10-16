@@ -43,11 +43,11 @@ Describe 'Collection workflow (synthetic sources)' {
         Install-IRFakeSource -Module $script:Module
     }
     It 'refuses live collection on non-Windows hosts unless explicitly allowed' {
-        if (-not (script:InModule { Test-IRWindowsHost })) { { Invoke-IRCollection -Profile BasicTriage -OutputPath (Join-Path $script:Tmp 'nowin') } | Should -Throw 'only supported on Windows' }
+        if (-not (script:InModule { Test-IRWindowsHost })) { { Invoke-IRCollection -Profile BasicTriage -OutputPath (Join-Path $script:Tmp 'nowin') } | Should -Throw '*only supported on Windows*' }
     }
     It 'validates profile, collectors, window and configuration' {
-        { Invoke-IRCollection -Profile Nope -OutputPath (Join-Path $script:Tmp 'x') -DryRun } | Should -Throw 'Unknown profile'
-        { Invoke-IRCollection -Profile BasicTriage -Collector bogus -OutputPath (Join-Path $script:Tmp 'x') -DryRun } | Should -Throw 'Unknown collector'
+        { Invoke-IRCollection -Profile Nope -OutputPath (Join-Path $script:Tmp 'x') -DryRun } | Should -Throw '*Unknown profile*'
+        { Invoke-IRCollection -Profile BasicTriage -Collector bogus -OutputPath (Join-Path $script:Tmp 'x') -DryRun } | Should -Throw '*Unknown collector*'
         { Invoke-IRCollection -Profile BasicTriage -EventHours 99999 -OutputPath (Join-Path $script:Tmp 'x') -DryRun } | Should -Throw
         { Invoke-IRCollection -Profile BasicTriage -ConfigPath (Join-Path $script:Tmp 'missing.json') -OutputPath (Join-Path $script:Tmp 'x') -DryRun } | Should -Throw
     }
@@ -56,11 +56,11 @@ Describe 'Collection workflow (synthetic sources)' {
 Describe 'Output path validation' {
     It 'rejects empty, traversal and file paths' {
         { script:InModule { Resolve-IROutputPath -Path '' } } | Should -Throw
-        { script:InModule { Resolve-IROutputPath -Path 'a\..\b' } } | Should -Throw '..'
+        { script:InModule { Resolve-IROutputPath -Path 'a\..\b' } } | Should -Throw '*..*'
         $f = Join-Path $script:Tmp 'afile.txt'; Set-Content $f 'x'
-        { script:InModule { param($f) Resolve-IROutputPath -Path $f } @($f) } | Should -Throw 'existing file'
+        { script:InModule { param($f) Resolve-IROutputPath -Path $f } @($f) } | Should -Throw '*existing file*'
     }
-    It 'rejects device paths' { { script:InModule { Resolve-IROutputPath -Path '\\.\C:\evidence' } } | Should -Throw 'Device' }
+    It 'rejects device paths' { { script:InModule { Resolve-IROutputPath -Path '\\.\C:\evidence' } } | Should -Throw '*Device*' }
     It 'refuses unsafe relative paths when joining' {
         foreach ($rel in '..\x', 'a\..\..\x', '\abs', 'C:\abs', '') { { script:InModule { param($b, $r) Join-IRSafePath -Base $b -Relative $r } @($script:Tmp, $rel) } | Should -Throw }
         script:InModule { param($b) Join-IRSafePath -Base $b -Relative 'artifacts/x.json' } @($script:Tmp) | Should -Match 'x\.json$'
@@ -68,7 +68,7 @@ Describe 'Output path validation' {
     It 'never overwrites an existing file' {
         $f = Join-Path $script:Tmp 'once.txt'
         script:InModule { param($f) Write-IRFileExclusive -Path $f -Text 'one' } @($f)
-        { script:InModule { param($f) Write-IRFileExclusive -Path $f -Text 'two' } @($f) } | Should -Throw 'overwrite'
+        { script:InModule { param($f) Write-IRFileExclusive -Path $f -Text 'two' } @($f) } | Should -Throw '*overwrite*'
         (Get-Content $f -Raw).Trim() | Should -Be 'one'
     }
 }
@@ -104,14 +104,14 @@ Describe 'Manifest verification' {
     It 'refuses to analyse tampered evidence unless -AllowUnverified is given' {
         $d = script:Copy-Case 'blocked'
         Add-Content (Join-Path $d 'artifacts\network.json') ' '
-        { Invoke-IRAnalysis -Path $d } | Should -Throw 'verification FAILED'
+        { Invoke-IRAnalysis -Path $d } | Should -Throw '*verification FAILED*'
         $a = Invoke-IRAnalysis -Path $d -AllowUnverified
         $a.Verification.Ok | Should -BeFalse
     }
     It 'rejects malformed artifact files' {
         $d = script:Copy-Case 'malformed'
         Set-Content (Join-Path $d 'artifacts\network.json') '{ nope'
-        { Invoke-IRAnalysis -Path $d -AllowUnverified } | Should -Throw 'Malformed artifact'
+        { Invoke-IRAnalysis -Path $d -AllowUnverified } | Should -Throw '*Malformed artifact*'
         { Invoke-IRAnalysis -Path $script:Tmp } | Should -Throw
     }
     It 'seals imported evidence and refuses to overwrite a manifest' {
@@ -120,14 +120,14 @@ Describe 'Manifest verification' {
         $s = Protect-IREvidenceDirectory -Path $d
         $s.Sha256 | Should -Match '^[0-9a-f]{64}$'
         (Test-IREvidenceManifest -Path $d).Ok | Should -BeTrue
-        { Protect-IREvidenceDirectory -Path $d } | Should -Throw 'already exists'
+        { Protect-IREvidenceDirectory -Path $d } | Should -Throw '*already exists*'
     }
     It 'refuses to seal symbolic links' {
         if ($PSVersionTable.PSEdition -eq 'Core') {
             $d = Join-Path $script:Tmp 'linked'; $null = New-Item -ItemType Directory (Join-Path $d 'artifacts') -Force
             Copy-Item (Join-Path $script:Case 'artifacts\network.json') (Join-Path $d 'artifacts\a.json')
             $ok = $true; try { $null = New-Item -ItemType SymbolicLink -Path (Join-Path $d 'artifacts\b.json') -Target (Join-Path $d 'artifacts\a.json') -ErrorAction Stop } catch { $ok = $false }
-            if ($ok) { { Protect-IREvidenceDirectory -Path $d } | Should -Throw 'symbolic link' }
+            if ($ok) { { Protect-IREvidenceDirectory -Path $d } | Should -Throw '*symbolic link*' }
         }
     }
 }

@@ -42,7 +42,7 @@ Describe 'Export-IRReport' {
         (Get-Content (Join-Path $script:Out 'findings.csv') -Raw) | Should -Not -Match 'hunter2'
     }
     It 'never overwrites existing reports' {
-        { $script:Analysis | Export-IRReport -OutputPath $script:Out } | Should -Throw 'overwrite'
+        { $script:Analysis | Export-IRReport -OutputPath $script:Out } | Should -Throw '*overwrite*'
     }
     It 'rejects unsafe output paths' {
         { $script:Analysis | Export-IRReport -OutputPath 'a\..\b' } | Should -Throw

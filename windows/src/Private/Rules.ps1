@@ -128,7 +128,7 @@ function Test-IRConditionMatch {
             'contains_any' { foreach ($o in $operand) { if ($sl.Contains("$o".ToLowerInvariant())) { return $true } } }
             'regex' {
                 try { if ([regex]::IsMatch($s, $operand, 'IgnoreCase', [TimeSpan]::FromMilliseconds(250))) { return $true } }
-                catch [Text.RegularExpressions.RegexMatchTimeoutException] { }
+                catch [Text.RegularExpressions.RegexMatchTimeoutException] { Write-Verbose 'regex timed out; treated as no match' }
             }
         }
     }

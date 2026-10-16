@@ -28,15 +28,15 @@ function ConvertTo-IREventRecord {
         Normalises a raw event into a flat, redacted record. Returns $null for unsupported ids.
     #>
     [CmdletBinding()]
-    param([Parameter(Mandatory)] $Event, [Parameter(Mandatory)] $Catalog, [Parameter(Mandatory)] $Redactor, [int]$CommandLineMaxChars = 2000)
-    $id = [int]$Event.Id
-    if (-not $Catalog.ContainsKey($id) -or $Catalog[$id].Log -ne $Event.LogName) { return $null }
-    $d = $Event.Data
+    param([Parameter(Mandatory)] $EventRecord, [Parameter(Mandatory)] $Catalog, [Parameter(Mandatory)] $Redactor, [int]$CommandLineMaxChars = 2000)
+    $id = [int]$EventRecord.Id
+    if (-not $Catalog.ContainsKey($id) -or $Catalog[$id].Log -ne $EventRecord.LogName) { return $null }
+    $d = $EventRecord.Data
     $get = { param($n) if ($d -is [System.Collections.IDictionary] -and $d.Contains($n)) { $v = "$($d[$n])"; if ($v -eq '' -or $v -eq '-') { $null } else { $v } } else { $null } }
     $trunc = { param($s) if ($null -eq $s) { $null } else { $r = Protect-IRText -Text $s -Redactor $Redactor; if ($r.Length -gt $CommandLineMaxChars) { $r.Substring(0, $CommandLineMaxChars) } else { $r } } }
     $rec = [ordered]@{
-        kind = 'event'; event_type = $Catalog[$id].Type; event_id = $id; log = $Event.LogName; provider = $Event.ProviderName
-        ts = ConvertTo-IRUtcIso $Event.TimeCreatedUtc; computer = $Event.MachineName; record_id = $Event.RecordId; level = $Event.Level
+        kind = 'event'; event_type = $Catalog[$id].Type; event_id = $id; log = $EventRecord.LogName; provider = $EventRecord.ProviderName
+        ts = ConvertTo-IRUtcIso $EventRecord.TimeCreatedUtc; computer = $EventRecord.MachineName; record_id = $EventRecord.RecordId; level = $EventRecord.Level
     }
     switch ($Catalog[$id].Type) {
         'logon_success' { $rec['user'] = & $get 'TargetUserName'; $rec['domain'] = & $get 'TargetDomainName'; $rec['logon_type'] = & $get 'LogonType'; $rec['src_ip'] = & $get 'IpAddress'; $rec['workstation'] = & $get 'WorkstationName'; $rec['process'] = & $get 'ProcessName' }

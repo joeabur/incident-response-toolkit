@@ -17,7 +17,7 @@
 [CmdletBinding()]
 param(
     [Parameter(Mandatory, Position = 0)][ValidateSet('Doctor', 'Info', 'Collect', 'Scan', 'Report', 'Verify', 'Seal')][string]$Command,
-    [string]$Profile = 'BasicTriage', [string]$OutputPath, [string]$InputPath, [string]$IocPath, [string]$BaselinePath,
+    [Alias('Profile')][string]$CollectionProfile = 'BasicTriage', [string]$OutputPath, [string]$InputPath, [string]$IocPath, [string]$BaselinePath,
     [string]$RulesPath, [string]$ConfigPath, [string[]]$Collector, [int]$EventHours = 0,
     [switch]$DryRun, [switch]$AllowUnverified, [switch]$FailOnFindings, [switch]$SkipSignature, [switch]$AllowNonWindows, [switch]$Json
 )
@@ -26,7 +26,7 @@ $ErrorActionPreference = 'Stop'
 Import-Module (Join-Path $PSScriptRoot '..\src\Modules\WinIRToolkit\WinIRToolkit.psd1') -Force
 
 function Stop-WithCode([int]$Code, [string]$Message) { if ($Message) { [Console]::Error.WriteLine("error: $Message") }; exit $Code }
-function Require-Param([string]$Name, [string]$Value) { if ([string]::IsNullOrWhiteSpace($Value)) { Stop-WithCode 2 "-$Name is required for -Command $Command" } }
+function Assert-Param([string]$Name, [string]$Value) { if ([string]::IsNullOrWhiteSpace($Value)) { Stop-WithCode 2 "-$Name is required for -Command $Command" } }
 
 try {
     switch ($Command) {
@@ -39,8 +39,8 @@ try {
             exit 0
         }
         'Collect' {
-            Require-Param 'OutputPath' $OutputPath
-            $r = Invoke-IRCollection -Profile $Profile -OutputPath $OutputPath -Collector $Collector -EventHours $EventHours -ConfigPath $ConfigPath -DryRun:$DryRun -SkipSignature:$SkipSignature -AllowNonWindows:$AllowNonWindows
+            Assert-Param 'OutputPath' $OutputPath
+            $r = Invoke-IRCollection -Profile $CollectionProfile -OutputPath $OutputPath -Collector $Collector -EventHours $EventHours -ConfigPath $ConfigPath -DryRun:$DryRun -SkipSignature:$SkipSignature -AllowNonWindows:$AllowNonWindows
             if ($r.DryRun) {
                 Write-Output "DRY RUN: profile=$($r.Profile); nothing will be collected or written. Output would go under $($r.OutputPath)\<host>-<UTC time>-<id>\"
                 foreach ($s in $r.Plan) { Write-Output "`n[$($s.Collector)] $($s.Description)`n  permissions: $($s.Permissions)"; foreach ($o in $s.Operations) { Write-Output "  - $o" } }
@@ -54,7 +54,7 @@ try {
             exit 0
         }
         'Verify' {
-            Require-Param 'InputPath' $InputPath
+            Assert-Param 'InputPath' $InputPath
             $v = Test-IREvidenceManifest -Path $InputPath
             if ($Json) { $v | ConvertTo-Json -Depth 6 }
             elseif ($v.Error) { Write-Output "ERROR: $($v.Error)" }
@@ -65,9 +65,9 @@ try {
             }
             exit $(if ($v.Ok) { 0 } else { 3 })
         }
-        'Seal' { Require-Param 'InputPath' $InputPath; $s = Protect-IREvidenceDirectory -Path $InputPath; Write-Output "sealed $InputPath; manifest SHA-256 $($s.Sha256)"; exit 0 }
+        'Seal' { Assert-Param 'InputPath' $InputPath; $s = Protect-IREvidenceDirectory -Path $InputPath; Write-Output "sealed $InputPath; manifest SHA-256 $($s.Sha256)"; exit 0 }
         { $_ -in 'Scan', 'Report' } {
-            Require-Param 'InputPath' $InputPath
+            Assert-Param 'InputPath' $InputPath
             $cfg = Get-IRConfiguration -Path $ConfigPath
             $a = Invoke-IRAnalysis -Path $InputPath -IocPath $IocPath -BaselinePath $BaselinePath -RulesPath $RulesPath -Config $cfg -AllowUnverified:$AllowUnverified
             if ($Command -eq 'Scan') {
@@ -82,7 +82,7 @@ try {
                 if ($FailOnFindings -and @($a.Findings).Count -gt 0) { exit 10 }
                 exit 0
             }
-            Require-Param 'OutputPath' $OutputPath
+            Assert-Param 'OutputPath' $OutputPath
             foreach ($p in @($a | Export-IRReport -OutputPath $OutputPath -EvidencePath $InputPath -Config $cfg)) { Write-Output "wrote $p" }
             exit 0
         }

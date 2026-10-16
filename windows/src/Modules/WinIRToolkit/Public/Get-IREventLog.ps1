@@ -45,7 +45,7 @@ function Get-IREventLog {
             $count = 0
             foreach ($e in @(Get-IRRawWinEvent -LogName $channel -Id $ids -Since $since -MaxEvents $maxPer)) {
                 if ($e.TimeCreatedUtc -lt $since) { continue }   # defensive: the source already filters by StartTime
-                $rec = ConvertTo-IREventRecord -Event $e -Catalog $catalog -Redactor $redactor -CommandLineMaxChars ([int]$Config.limits.commandLineMaxChars)
+                $rec = ConvertTo-IREventRecord -EventRecord $e -Catalog $catalog -Redactor $redactor -CommandLineMaxChars ([int]$Config.limits.commandLineMaxChars)
                 if ($rec) { $res.Records.Add($rec); $count++ }
             }
             $stats[$channel] = $count

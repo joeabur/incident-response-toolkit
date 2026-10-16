@@ -1,0 +1,5 @@
+# Synthetic AWS-style test key in the first PR commit (test data for the redaction tests, not a credential).
+# The current tree assembles the value at runtime; these fingerprints cover the already-committed history.
+f1ae322dad8f469bd5fe4ad06e8239b8608241d6:linux/tests/unit/test_config_platform.py:aws-access-token:72
+f1ae322dad8f469bd5fe4ad06e8239b8608241d6:macos/tests/unit/test_config_platform.py:aws-access-token:98
+f1ae322dad8f469bd5fe4ad06e8239b8608241d6:windows/tests/Unit/Parsing.Tests.ps1:aws-access-token:85

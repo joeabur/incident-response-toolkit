@@ -80,9 +80,10 @@ Describe 'Redaction' {
     It 'redacts keyword assignments, CLI flags, URL credentials, bearer tokens and AWS keys' {
         $cfg = Get-IRConfiguration
         $r = script:InModule { param($p) New-IRRedactor -Patterns $p } @(, $cfg.redaction.patterns)
+        $aws = 'AKIA' + 'ABCDEFGHIJKLMNOP'   # assembled at runtime: not a real key, avoids secret-scanner false positives
         $texts = @{
             'tool.exe --password=hunter2' = 'hunter2'; 'curl https://u:s3cret@host/x' = 's3cret'; 'Authorization: Bearer abcdefghijklmnop' = 'abcdefghijklmnop'
-            'key AKIAABCDEFGHIJKLMNOP' = 'AKIAABCDEFGHIJKLMNOP'; 'token=abc123' = 'abc123'; 'net use \\srv\share P@ssw0rd /user:bob' = 'P@ssw0rd'
+            "key $aws" = $aws; 'token=abc123' = 'abc123'; 'net use \\srv\share P@ssw0rd /user:bob' = 'P@ssw0rd'
         }
         foreach ($t in $texts.Keys) {
             $out = script:InModule { param($t, $r) Protect-IRText -Text $t -Redactor $r } @($t, $r)

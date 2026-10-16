@@ -1,0 +1,6 @@
+# Keep line endings stable so SHA-256 manifests verify identically on Windows, macOS and Linux.
+* text=auto eol=lf
+# Evidence fixtures are hashed byte-for-byte: never convert them.
+linux/examples/synthetic-evidence/** -text
+macos/examples/synthetic-evidence/** -text
+windows/sample-data/** -text

@@ -19,7 +19,9 @@ file with size and SHA-256, and limitations.
 **unsafe** (traversal/symlink) entries; it never modifies evidence; exit code 3 on failure.
 
 A manifest stored beside evidence is **not independently tamper-proof**. Record its SHA-256 (printed by `collect`, also
-written to `evidence-manifest.sha256` by `report`) in a separate system or sign it with your own tooling.
+written to `evidence-manifest.sha256` by `report`) in a separate system or sign it with your own tooling. To check it later,
+pass the recorded value: `verify-manifest --input DIR --expected-manifest-sha256 HEX` prints `Expected hash: MATCH` or
+`MISMATCH` and exits 3 on a mismatch (replacing `manifest.json` together with the evidence is then detected).
 
 ## Live response vs forensic acquisition
 

@@ -115,12 +115,18 @@ def write_manifest(evdir: Path, manifest: dict[str, Any]) -> tuple[Path, str]:
     return path, sha256_bytes(data)
 
 
-def verify_manifest(evdir: Path) -> dict[str, Any]:
-    """Recompute hashes and compare with the manifest. Never modifies the evidence."""
+def verify_manifest(evdir: Path, expected_manifest_sha256: str | None = None) -> dict[str, Any]:
+    """Recompute hashes and compare with the manifest. Never modifies the evidence.
+
+    A manifest stored beside the evidence can be replaced together with it. When the SHA-256 of
+    manifest.json was recorded elsewhere at collection time, pass it as ``expected_manifest_sha256``
+    to detect that: a mismatch fails verification.
+    """
     mpath = evdir / MANIFEST_NAME
     result: dict[str, Any] = {
         "ok": False,
         "manifest_sha256": None,
+        "manifest_hash_match": None,
         "verified": 0,
         "modified": [],
         "missing": [],
@@ -137,6 +143,8 @@ def verify_manifest(evdir: Path) -> dict[str, Any]:
         result["error"] = str(exc)
         return result
     result["manifest_sha256"] = sha256_bytes(raw)
+    if expected_manifest_sha256 is not None:
+        result["manifest_hash_match"] = result["manifest_sha256"] == expected_manifest_sha256.strip().lower()
     try:
         manifest = json.loads(raw)
         entries = manifest["files"]
@@ -174,6 +182,8 @@ def verify_manifest(evdir: Path) -> dict[str, Any]:
         if rel not in listed:
             result["unexpected"].append(rel)
     result["ok"] = not (result["modified"] or result["missing"] or result["unexpected"] or result["unsafe"])
+    if result["manifest_hash_match"] is False:
+        result["ok"] = False
     return result
 
 

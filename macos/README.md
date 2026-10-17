@@ -52,7 +52,7 @@ Full tutorial: [docs/walkthrough.md](docs/walkthrough.md).
 
 | Platform | Status |
 |---|---|
-| macOS 12 Monterey – 15 Sequoia, Apple silicon (arm64) and Intel (x86_64) | **Targeted.** Live collection has **not yet been run on a real Mac by the author of this repository**; collectors are verified against synthetic command output and a fake filesystem. macOS-only integration tests exist (`tests/integration/test_macos_live.py`) and run on the macOS CI job. |
+| macOS 12 Monterey – 15 Sequoia, Apple silicon (arm64) and Intel (x86_64) | **Targeted.** Live collection has been exercised only by the macOS-only integration tests (`tests/integration/test_macos_live.py`) on GitHub-hosted runners (`macos-latest`, `macos-15-intel`), not by the author on a personal Mac; collectors are otherwise verified against synthetic command output and a fake filesystem. |
 | Linux / Windows | Live collection is refused with an explanation (`--dry-run`, `scan`, `report`, `verify-manifest`, `seal` and all tests work). |
 
 Python ≥ 3.11 (3.12 recommended) and `PyYAML`. Native tools used: `sw_vers`, `ps`, `lsof`, `netstat`, `ifconfig`, `log`,

@@ -89,6 +89,19 @@ Describe 'Manifest verification' {
         $v.Missing | Should -Contain 'artifacts/accounts.json'
         $v.Unexpected | Should -Contain 'artifacts/extra.json'
     }
+    It 'checks the manifest against a hash recorded elsewhere' {
+        $d = script:Copy-Case 'pinned'
+        $good = (Get-FileHash -LiteralPath (Join-Path $d 'manifest.json') -Algorithm SHA256).Hash.ToLowerInvariant()
+        $v = Test-IREvidenceManifest -Path $d -ExpectedManifestSha256 $good.ToUpperInvariant()
+        $v.ManifestHashMatch | Should -BeTrue
+        $v.Ok | Should -BeTrue
+        $bad = Test-IREvidenceManifest -Path $d -ExpectedManifestSha256 ('0' * 64)
+        $bad.ManifestHashMatch | Should -BeFalse
+        $bad.Ok | Should -BeFalse
+        @($bad.Modified).Count | Should -Be 0
+        (Test-IREvidenceManifest -Path $d).ManifestHashMatch | Should -BeNullOrEmpty
+        { Test-IREvidenceManifest -Path $d -ExpectedManifestSha256 'not-a-hash' } | Should -Throw
+    }
     It 'rejects traversal entries and invalid manifests' {
         $d = script:Copy-Case 'trav'
         $m = Get-Content (Join-Path $d 'manifest.json') -Raw | ConvertFrom-Json

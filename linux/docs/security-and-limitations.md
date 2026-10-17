@@ -49,4 +49,4 @@ The tool **never calls sudo**. You decide whether to rerun a specific collector 
 | Unit/integration tests (pytest), Ruff lint+format, mypy | Run and passing on Ubuntu 24.04 / Python 3.13 (see CHANGELOG/CI) |
 | Live collection on Ubuntu 24.04 container (non-systemd PID 1, root, no `ss`/`ip`) | Exercised manually; fallbacks verified |
 | Live collection on systemd hosts (Ubuntu/Debian/Fedora), ARM64, unprivileged user | **Not tested here**; covered only by synthetic fake-root tests |
-| GitHub Actions workflows | Written, **not executed** in this environment |
+| GitHub Actions workflows | Executed on the pull request; all jobs green at merge |

@@ -13,10 +13,16 @@ from .models import Finding
 
 
 def analyze(
-    evdir: Path, config: dict[str, Any], iocs: Path | None, rules_dir: Path | None, baseline: Path | None
+    evdir: Path,
+    config: dict[str, Any],
+    iocs: Path | None,
+    rules_dir: Path | None,
+    baseline: Path | None,
+    expected_manifest_sha256: str | None = None,
 ) -> dict[str, Any]:
     arts, manifest = load_evidence(evdir)
-    verification = verify_manifest(evdir) if manifest else None
+    # With a recorded hash, a missing manifest must fail verification rather than skip it.
+    verification = verify_manifest(evdir, expected_manifest_sha256) if (manifest or expected_manifest_sha256) else None
     base_arts = load_evidence(baseline)[0] if baseline else None
     rules = load_rules(find_rules_dir(rules_dir))
     det = config["detection"]

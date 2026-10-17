@@ -54,6 +54,6 @@ permissions vary by macOS version, so identical commands can yield different cov
 |---|---|
 | Unit tests (parsers, collectors against fake root + mocked `ps`/`lsof`/`log`/`codesign` output), detections, IOC, manifest, reports, CLI, docs checks | Run and passing on Linux (Ubuntu 24.04, Python 3.13) |
 | Ruff lint + format, mypy | Run and passing on Linux |
-| Real-Mac execution (live `collect` on macOS 12–15, arm64 and x86_64), macOS-only integration tests | **Not run in this environment**; planned CI job on `macos-latest` |
+| macOS-only integration tests (live `collect`) | **Run in CI** on GitHub-hosted `macos-latest` and `macos-15-intel` runners and passing. **Not tried on macOS 12-14, on a personal Mac or with elevation** |
 | Exact output formats of `log show --style ndjson`, `lsof -F`, `socketfilterfw` on every macOS version | **Unverified**; parsers are defensive and report malformed lines, but verify on your OS version |
-| GitHub Actions workflows | Written, **not executed** here |
+| GitHub Actions workflows | Executed on the pull request; all jobs green at merge |

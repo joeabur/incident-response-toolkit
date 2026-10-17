@@ -27,6 +27,31 @@ Describe 'Shipped rules' {
     }
 }
 
+Describe 'Rule coverage' {
+    It 'has a firing test for every shipped rule' {
+        # Rules the synthetic case does not trigger need a minimal positive sample here; this fails when a new rule has neither.
+        $samples = @{
+            'WIR-PERS-004' = @{ Records = @([pscustomobject]@{ kind = 'scheduled_task'; name = 'T'; exec_expanded = 'c:\users\public\x.exe' }) }
+            'WIR-PERS-009' = @{ Records = @([pscustomobject]@{ kind = 'winlogon_value'; name = 'Shell'; value = 'cmd.exe' }) }
+            'WIR-PERS-010' = @{ Records = @([pscustomobject]@{ kind = 'winlogon_value'; name = 'Userinit'; value = 'C:\Temp\evil.exe,' }) }
+            'WIR-PERS-014' = @{
+                Records  = @([pscustomobject]@{ kind = 'service'; name = 'S'; exec_binary = 'c:\x.exe'; exec_sha256 = 'b' })
+                Baseline = [ordered]@{ persistence = [pscustomobject]@{ status = 'ok'; records = @([pscustomobject]@{ kind = 'service'; name = 'S'; exec_binary = 'c:\x.exe'; exec_sha256 = 'a' }) } }
+            }
+        }
+        $fired = @($script:Analysis.Findings | ForEach-Object { $_.rule_id })
+        $rules = @(Import-IRRule | ForEach-Object { $_ })
+        $uncovered = @($rules | Where-Object { $_.Id -notin $fired -and -not $samples.ContainsKey($_.Id) } | ForEach-Object { $_.Id })
+        ($uncovered -join ',') | Should -BeNullOrEmpty
+        foreach ($id in $samples.Keys) {
+            $rule = $rules | Where-Object { $_.Id -eq $id }
+            $rule | Should -Not -BeNullOrEmpty
+            $res = script:Eval $rule.Raw $samples[$id].Records 'ok' $samples[$id].Baseline
+            @($res.Findings | Where-Object { $_.rule_id -eq $id }).Count | Should -Be 1
+        }
+    }
+}
+
 Describe 'Detections on the synthetic case' {
     It 'fires the expected rules with separate severity and confidence' {
         $ids = @($script:Analysis.Findings | ForEach-Object rule_id | Sort-Object -Unique)

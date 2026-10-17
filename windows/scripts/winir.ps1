@@ -18,7 +18,7 @@
 param(
     [Parameter(Mandatory, Position = 0)][ValidateSet('Doctor', 'Info', 'Collect', 'Scan', 'Report', 'Verify', 'Seal')][string]$Command,
     [Alias('Profile')][string]$CollectionProfile = 'BasicTriage', [string]$OutputPath, [string]$InputPath, [string]$IocPath, [string]$BaselinePath,
-    [string]$RulesPath, [string]$ConfigPath, [string[]]$Collector, [int]$EventHours = 0,
+    [string]$RulesPath, [string]$ConfigPath, [string]$ExpectedManifestSha256, [string[]]$Collector, [int]$EventHours = 0,
     [switch]$DryRun, [switch]$AllowUnverified, [switch]$FailOnFindings, [switch]$SkipSignature, [switch]$AllowNonWindows, [switch]$Json
 )
 Set-StrictMode -Version Latest
@@ -55,11 +55,17 @@ try {
         }
         'Verify' {
             Assert-Param 'InputPath' $InputPath
-            $v = Test-IREvidenceManifest -Path $InputPath
+            $vArgs = @{ Path = $InputPath }
+            if ($PSBoundParameters.ContainsKey('ExpectedManifestSha256')) {
+                if ($ExpectedManifestSha256 -notmatch '^[0-9a-fA-F]{64}$') { Stop-WithCode 2 '-ExpectedManifestSha256 must be 64 hexadecimal characters' }
+                $vArgs.ExpectedManifestSha256 = $ExpectedManifestSha256
+            }
+            $v = Test-IREvidenceManifest @vArgs
             if ($Json) { $v | ConvertTo-Json -Depth 6 }
             elseif ($v.Error) { Write-Output "ERROR: $($v.Error)" }
             else {
                 Write-Output "Manifest SHA-256: $($v.ManifestSha256)"; Write-Output "Verified files : $($v.Verified)"
+                if ($null -ne $v.ManifestHashMatch) { Write-Output ('Expected hash  : ' + $(if ($v.ManifestHashMatch) { 'MATCH' } else { 'MISMATCH (manifest.json differs from the recorded hash)' })) }
                 foreach ($k in 'Modified', 'Missing', 'Unexpected', 'Unsafe') { foreach ($i in @($v.$k)) { Write-Output ("{0,-10}: {1}" -f $k.ToUpperInvariant(), ($i | ConvertTo-Json -Compress -Depth 3)) } }
                 Write-Output ('RESULT: ' + $(if ($v.Ok) { 'PASS: all hashes match' } else { 'FAIL: evidence differs from manifest' }))
             }
@@ -69,7 +75,12 @@ try {
         { $_ -in 'Scan', 'Report' } {
             Assert-Param 'InputPath' $InputPath
             $cfg = Get-IRConfiguration -Path $ConfigPath
-            $a = Invoke-IRAnalysis -Path $InputPath -IocPath $IocPath -BaselinePath $BaselinePath -RulesPath $RulesPath -Config $cfg -AllowUnverified:$AllowUnverified
+            $aArgs = @{ Path = $InputPath; IocPath = $IocPath; BaselinePath = $BaselinePath; RulesPath = $RulesPath; Config = $cfg; AllowUnverified = $AllowUnverified }
+            if ($PSBoundParameters.ContainsKey('ExpectedManifestSha256')) {
+                if ($ExpectedManifestSha256 -notmatch '^[0-9a-fA-F]{64}$') { Stop-WithCode 2 '-ExpectedManifestSha256 must be 64 hexadecimal characters' }
+                $aArgs.ExpectedManifestSha256 = $ExpectedManifestSha256
+            }
+            $a = Invoke-IRAnalysis @aArgs
             if ($Command -eq 'Scan') {
                 if ($Json) { $a.Findings | ConvertTo-Json -Depth 8 }
                 else {

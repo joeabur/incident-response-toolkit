@@ -20,7 +20,9 @@ evidence/<host>-<UTC timestamp>-<random>/        mode 0700, never reused
 
 A manifest stored beside evidence is **not independently tamper-proof**: whoever can alter evidence can also rewrite the
 manifest. Record the manifest SHA-256 (printed by `collect`, also written to `evidence-manifest.sha256` by `report`) in a
-separate system (ticket, write-once store) or sign the manifest with your own tooling.
+separate system (ticket, write-once store) or sign the manifest with your own tooling. To check it later, pass the
+recorded value: `verify-manifest --input DIR --expected-manifest-sha256 HEX` prints `Expected hash: MATCH` or `MISMATCH`
+and exits 3 on a mismatch (replacing `manifest.json` together with the evidence is then detected).
 
 ## Collection scope and limitations
 

@@ -52,6 +52,16 @@ def test_verify_detects_modification_deletion_and_additions(collected):
     assert "artifacts/logs.json" in res["missing"] and "artifacts/extra.json" in res["unexpected"]
 
 
+def test_verify_checks_manifest_against_hash_recorded_elsewhere(collected):
+    evdir, digest, _ = collected
+    res = verify_manifest(evdir, digest.upper())
+    assert res["ok"] and res["manifest_hash_match"] is True
+    res = verify_manifest(evdir, "0" * 64)
+    assert not res["ok"] and res["manifest_hash_match"] is False
+    assert not (res["modified"] or res["missing"] or res["unexpected"])  # only the pinned hash differs
+    assert verify_manifest(evdir)["manifest_hash_match"] is None
+
+
 def test_verify_rejects_traversal_entries_and_bad_manifest(collected):
     evdir, *_ = collected
     m = json.loads((evdir / "manifest.json").read_text())

@@ -103,24 +103,32 @@ function Test-IREvidenceManifest {
         Verifies evidence files against manifest.json (read-only).
     .DESCRIPTION
         Recomputes SHA-256 and size for each listed file and reports modified, missing, unexpected and unsafe
-        (traversal, reparse point) entries. The manifest is not independently tamper-proof: also compare
-        ManifestSha256 with a copy stored elsewhere.
+        (traversal, reparse point) entries. The manifest is not independently tamper-proof: pass the SHA-256
+        of manifest.json that you recorded elsewhere at collection time as -ExpectedManifestSha256 to detect a
+        manifest that was replaced together with the evidence (a mismatch makes Ok false).
     .PARAMETER Path
         Evidence directory.
+    .PARAMETER ExpectedManifestSha256
+        Optional 64-character hexadecimal SHA-256 of manifest.json recorded outside the evidence directory.
     .OUTPUTS
-        PSCustomObject: Ok, ManifestSha256, Verified, Modified, Missing, Unexpected, Unsafe, Error.
+        PSCustomObject: Ok, ManifestSha256, ManifestHashMatch ($null when no expected hash was given), Verified,
+        Modified, Missing, Unexpected, Unsafe, Error.
     .EXAMPLE
         Test-IREvidenceManifest -Path .\sample-data\case-001 | Format-List
     #>
     [CmdletBinding()]
     [OutputType([pscustomobject])]
-    param([Parameter(Mandatory)][string]$Path)
-    $r = [ordered]@{ Ok = $false; ManifestSha256 = $null; Verified = 0; Modified = @(); Missing = @(); Unexpected = @(); Unsafe = @(); Error = $null }
+    param(
+        [Parameter(Mandatory)][string]$Path,
+        [ValidatePattern('^[0-9a-fA-F]{64}$')][string]$ExpectedManifestSha256
+    )
+    $r = [ordered]@{ Ok = $false; ManifestSha256 = $null; ManifestHashMatch = $null; Verified = 0; Modified = @(); Missing = @(); Unexpected = @(); Unsafe = @(); Error = $null }
     if (-not (Test-Path -LiteralPath $Path -PathType Container)) { $r.Error = "Evidence directory not found: $Path"; return [pscustomobject]$r }
     $mpath = Join-Path $Path $script:ManifestName
     if (-not (Test-Path -LiteralPath $mpath -PathType Leaf)) { $r.Error = "$($script:ManifestName) not found in $Path"; return [pscustomobject]$r }
     $raw = [IO.File]::ReadAllBytes($mpath)
     $r.ManifestSha256 = Get-IRBytesSha256 -Bytes $raw
+    if ($PSBoundParameters.ContainsKey('ExpectedManifestSha256')) { $r.ManifestHashMatch = ($r.ManifestSha256 -eq $ExpectedManifestSha256.ToLowerInvariant()) }
     try {
         $manifest = (New-Object Text.UTF8Encoding($false)).GetString($raw) | ConvertFrom-Json
         $entries = @($manifest.files)
@@ -141,6 +149,7 @@ function Test-IREvidenceManifest {
     }
     foreach ($f in @(Get-IREvidenceFile -EvidenceDir $Path)) { if (-not $listed.ContainsKey($f.Path)) { $r.Unexpected += $f.Path } }
     $r.Ok = (@($r.Modified).Count + @($r.Missing).Count + @($r.Unexpected).Count + @($r.Unsafe).Count) -eq 0
+    if ($r.ManifestHashMatch -eq $false) { $r.Ok = $false }
     return [pscustomobject]$r
 }
 

@@ -19,9 +19,9 @@ All commands: `python -m linux_ir [--config FILE] <command> ...` (also installed
 | `info [--json]` | Platform, init system, privileges | |
 | `doctor` | Readiness checks: OS, arch, init, privileges, tools, readable paths | |
 | `collect` | Read-only collection into a new unique directory | `--profile basic\|extended`, `--output DIR` (required), `--collectors a,b`, `--dry-run`, `--log-hours N`, `--import-log FILE` (repeatable) |
-| `scan` | Run detections and IOC matching | `--input DIR` (required), `--iocs FILE`, `--rules DIR`, `--baseline DIR`, `--allow-unverified`, `--json`, `--fail-on-findings` |
+| `scan` | Run detections and IOC matching | `--input DIR` (required), `--iocs FILE`, `--rules DIR`, `--baseline DIR`, `--allow-unverified`, `--expected-manifest-sha256 HEX`, `--json`, `--fail-on-findings` |
 | `report` | Write JSON/CSV/Markdown reports | same as scan plus `--output DIR` (required; files are never overwritten) |
-| `verify-manifest` | Recompute hashes and compare with `manifest.json` | `--input DIR`, `--json` |
+| `verify-manifest` | Recompute hashes and compare with `manifest.json` | `--input DIR`, `--expected-manifest-sha256 HEX`, `--json` |
 | `seal` | Create a manifest for an existing `artifacts/` directory (imported/synthetic evidence) | `--input DIR` |
 
 ## Profiles

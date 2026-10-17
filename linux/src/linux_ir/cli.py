@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -60,6 +61,11 @@ def _parser() -> argparse.ArgumentParser:
             s.add_argument("--output", type=Path, required=True, help="report directory (files are never overwritten)")
     v = sub.add_parser("verify-manifest", help="verify evidence hashes against manifest.json")
     v.add_argument("--input", type=Path, required=True)
+    v.add_argument(
+        "--expected-manifest-sha256",
+        metavar="HEX",
+        help="SHA-256 of manifest.json recorded elsewhere at collection time; a mismatch fails verification",
+    )
     v.add_argument("--json", action="store_true")
     sl = sub.add_parser(
         "seal", help="create manifest.json for an existing artifacts/ directory (imported/synthetic evidence)"
@@ -201,7 +207,11 @@ def _cmd_verify(args: argparse.Namespace) -> int:
     if not args.input.is_dir():
         print(f"error: evidence directory not found: {args.input}", file=sys.stderr)
         return EXIT_USAGE
-    res = verify_manifest(args.input)
+    expected = args.expected_manifest_sha256
+    if expected is not None and not re.fullmatch(r"[0-9a-fA-F]{64}", expected.strip()):
+        print("error: --expected-manifest-sha256 must be 64 hexadecimal characters", file=sys.stderr)
+        return EXIT_USAGE
+    res = verify_manifest(args.input, expected)
     if args.json:
         print(json.dumps(res, indent=2))
     else:
@@ -209,6 +219,15 @@ def _cmd_verify(args: argparse.Namespace) -> int:
             print(f"ERROR: {res['error']}")
         else:
             print(f"Manifest SHA-256: {res['manifest_sha256']}")
+            if res["manifest_hash_match"] is not None:
+                print(
+                    "Expected hash  : "
+                    + (
+                        "MATCH"
+                        if res["manifest_hash_match"]
+                        else "MISMATCH (manifest.json differs from the recorded hash)"
+                    )
+                )
             print(f"Verified files : {res['verified']}")
             for key in ("modified", "missing", "unexpected", "unsafe"):
                 for item in res[key]:

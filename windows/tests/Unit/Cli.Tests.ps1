@@ -25,6 +25,16 @@ Describe 'winir.ps1 exit codes' {
         $r.Output | Should -Match 'MODIFIED'
         $r.Output | Should -Match 'FAIL'
     }
+    It 'Verify honours -ExpectedManifestSha256 (0 match, 3 mismatch, 2 malformed)' {
+        $good = (Get-FileHash -LiteralPath (Join-Path $script:Case 'manifest.json') -Algorithm SHA256).Hash.ToLowerInvariant()
+        $r = script:Run-Cli @('-Command', 'Verify', '-InputPath', $script:Case, '-ExpectedManifestSha256', $good)
+        $r.ExitCode | Should -Be 0
+        $r.Output | Should -Match 'MATCH'
+        $r = script:Run-Cli @('-Command', 'Verify', '-InputPath', $script:Case, '-ExpectedManifestSha256', ('0' * 64))
+        $r.ExitCode | Should -Be 3
+        $r.Output | Should -Match 'MISMATCH'
+        (script:Run-Cli @('-Command', 'Verify', '-InputPath', $script:Case, '-ExpectedManifestSha256', 'xyz')).ExitCode | Should -Be 2
+    }
     It 'Scan refuses tampered evidence (3) unless -AllowUnverified (0)' {
         $copy = Join-Path $script:Tmp 'tamper'
         (script:Run-Cli @('-Command', 'Scan', '-InputPath', $copy)).ExitCode | Should -Be 3

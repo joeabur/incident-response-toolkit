@@ -57,7 +57,7 @@ All commands are exported by the `WinIRToolkit` module. `scripts/winir.ps1` wrap
 | `Import-IRIoc` | Load + validate IOC JSON | `-Path` | none | throws on any invalid entry | `Import-IRIoc .\examples\iocs.json` |
 | `Find-IRIocMatch` | Exact IOC matching on loaded artifacts | `-Artifacts -Indicators -MatchSubdomains` | none | returns findings | see [examples](examples.md) |
 | `Import-IRRule` | Load + validate JSON detection rules | `-Path` | none | throws on invalid/duplicate rules | `Import-IRRule \| Measure-Object` |
-| `Test-IREvidenceManifest` | Verify evidence hashes (read-only) | `-Path` | none | returns `Ok/Modified/Missing/Unexpected/Unsafe/Error` | `Test-IREvidenceManifest .\sample-data\case-001` |
+| `Test-IREvidenceManifest` | Verify evidence hashes (read-only) | `-Path`, `-ExpectedManifestSha256` (SHA-256 of `manifest.json` recorded elsewhere; mismatch makes `Ok` false) | none | returns `Ok/ManifestHashMatch/Modified/Missing/Unexpected/Unsafe/Error` | `Test-IREvidenceManifest .\sample-data\case-001` |
 | `Protect-IREvidenceDirectory` | Create a manifest for imported/synthetic artifacts | `-Path` | write access to the directory | refuses to overwrite a manifest | `Protect-IREvidenceDirectory .\imported` |
 | `Invoke-IRAnalysis` | Verify → rules → IOCs → baseline diff | `-Path -IocPath -BaselinePath -RulesPath -Config -AllowUnverified` | none | `IRUsage` (missing paths), `IRVerificationFailed`, `IRRuntime` | `Invoke-IRAnalysis -Path .\sample-data\case-001` |
 | `Export-IRReport` | Write `report.json`, `findings.csv`, `report.html` (+ manifest copy) | `-Analysis -OutputPath -Format -EvidencePath -Config` | write access | never overwrites (throws) | `$a \| Export-IRReport -OutputPath .\reports\c1` |

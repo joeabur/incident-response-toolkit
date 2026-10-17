@@ -21,7 +21,7 @@ All commands: `python -m mac_ir [--config FILE] <command> ...` (also installed a
 | `collect` | Read-only collection into a new unique directory | `--profile basic\|extended`, `--output DIR` (required), `--collectors a,b`, `--dry-run`, `--log-hours N`, `--import-log FILE.ndjson`, `--import-archive X.logarchive` (repeatable) |
 | `scan` | Run detections and IOC matching | `--input DIR`, `--iocs FILE`, `--rules DIR`, `--baseline DIR`, `--allow-unverified`, `--json`, `--fail-on-findings` |
 | `report` | Write JSON/CSV/Markdown reports | as scan plus `--output DIR` (files never overwritten) |
-| `verify-manifest` | Recompute hashes and compare with `manifest.json` | `--input DIR`, `--json` |
+| `verify-manifest` | Recompute hashes and compare with `manifest.json` | `--input DIR`, `--expected-manifest-sha256 HEX`, `--json` |
 | `seal` | Create a manifest for an existing `artifacts/` directory | `--input DIR` |
 
 ## Profiles

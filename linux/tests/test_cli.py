@@ -62,6 +62,18 @@ def test_collect_validation(tmp_path, capsys):
     assert "error:" in capsys.readouterr().err
 
 
+def test_verify_manifest_expected_hash(capsys):
+    import hashlib
+
+    good = hashlib.sha256((CASE / "manifest.json").read_bytes()).hexdigest()
+    assert main(["verify-manifest", "--input", str(CASE), "--expected-manifest-sha256", good]) == 0
+    assert "MATCH" in capsys.readouterr().out
+    assert main(["verify-manifest", "--input", str(CASE), "--expected-manifest-sha256", "0" * 64]) == 3
+    assert "MISMATCH" in capsys.readouterr().out
+    assert main(["verify-manifest", "--input", str(CASE), "--expected-manifest-sha256", "xyz"]) == 2
+    assert "64 hexadecimal" in capsys.readouterr().err
+
+
 @pytest.mark.skipif(not sys.platform.startswith("linux"), reason="live collection needs Linux")
 def test_live_collect_scan_report_verify(tmp_path, capsys):
     assert (

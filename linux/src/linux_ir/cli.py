@@ -54,6 +54,11 @@ def _parser() -> argparse.ArgumentParser:
         s.add_argument("--rules", type=Path, help="rules directory (default: ./rules or $IR_TOOLKIT_RULES)")
         s.add_argument("--baseline", type=Path, help="earlier evidence directory for baseline-diff rules")
         s.add_argument("--allow-unverified", action="store_true", help="analyse even if manifest verification fails")
+        s.add_argument(
+            "--expected-manifest-sha256",
+            metavar="HEX",
+            help="SHA-256 of manifest.json recorded elsewhere at collection time; a mismatch fails verification",
+        )
         if name == "scan":
             s.add_argument("--json", action="store_true", help="print findings as JSON")
             s.add_argument("--fail-on-findings", action="store_true", help="exit 10 when any finding exists")
@@ -168,13 +173,22 @@ def _cmd_analyze(args: argparse.Namespace, cfg: dict) -> int:
         if opt is not None and not opt.exists():
             print(f"error: path not found: {opt}", file=sys.stderr)
             return EXIT_USAGE
-    result = analyze(args.input, cfg, args.iocs, args.rules, args.baseline)
+    expected = args.expected_manifest_sha256
+    if expected is not None and not re.fullmatch(r"[0-9a-fA-F]{64}", expected.strip()):
+        print("error: --expected-manifest-sha256 must be 64 hexadecimal characters", file=sys.stderr)
+        return EXIT_USAGE
+    result = analyze(args.input, cfg, args.iocs, args.rules, args.baseline, expected)
     ver = result["verification"]
     if ver is not None and not ver["ok"] and not args.allow_unverified:
+        extra = ""
+        if ver["manifest_hash_match"] is False:
+            extra = " manifest.json does not match the expected SHA-256."
+        if ver["error"]:
+            extra += f" {ver['error']}."
         print(
             "error: evidence integrity verification FAILED (modified="
-            f"{len(ver['modified'])}, missing={len(ver['missing'])}, unexpected={len(ver['unexpected'])}). "
-            "Re-run with --allow-unverified to analyse anyway.",
+            f"{len(ver['modified'])}, missing={len(ver['missing'])}, unexpected={len(ver['unexpected'])})."
+            f"{extra} Re-run with --allow-unverified to analyse anyway.",
             file=sys.stderr,
         )
         return EXIT_VERIFY_FAILED

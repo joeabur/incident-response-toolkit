@@ -75,7 +75,12 @@ try {
         { $_ -in 'Scan', 'Report' } {
             Assert-Param 'InputPath' $InputPath
             $cfg = Get-IRConfiguration -Path $ConfigPath
-            $a = Invoke-IRAnalysis -Path $InputPath -IocPath $IocPath -BaselinePath $BaselinePath -RulesPath $RulesPath -Config $cfg -AllowUnverified:$AllowUnverified
+            $aArgs = @{ Path = $InputPath; IocPath = $IocPath; BaselinePath = $BaselinePath; RulesPath = $RulesPath; Config = $cfg; AllowUnverified = $AllowUnverified }
+            if ($PSBoundParameters.ContainsKey('ExpectedManifestSha256')) {
+                if ($ExpectedManifestSha256 -notmatch '^[0-9a-fA-F]{64}$') { Stop-WithCode 2 '-ExpectedManifestSha256 must be 64 hexadecimal characters' }
+                $aArgs.ExpectedManifestSha256 = $ExpectedManifestSha256
+            }
+            $a = Invoke-IRAnalysis @aArgs
             if ($Command -eq 'Scan') {
                 if ($Json) { $a.Findings | ConvertTo-Json -Depth 8 }
                 else {

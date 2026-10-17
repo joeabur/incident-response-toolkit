@@ -74,6 +74,57 @@ def test_verify_manifest_expected_hash(capsys):
     assert "64 hexadecimal" in capsys.readouterr().err
 
 
+def test_scan_and_report_enforce_expected_manifest_hash(tmp_path, capsys):
+    import hashlib
+    import shutil
+
+    good = hashlib.sha256((CASE / "manifest.json").read_bytes()).hexdigest()
+    assert main(["scan", "--input", str(CASE), "--rules", str(RULES), "--expected-manifest-sha256", good]) == 0
+    capsys.readouterr()
+    assert main(["scan", "--input", str(CASE), "--rules", str(RULES), "--expected-manifest-sha256", "0" * 64]) == 3
+    assert "does not match the expected SHA-256" in capsys.readouterr().err
+    assert (
+        main(
+            [
+                "scan",
+                "--input",
+                str(CASE),
+                "--rules",
+                str(RULES),
+                "--expected-manifest-sha256",
+                "0" * 64,
+                "--allow-unverified",
+            ]
+        )
+        == 0
+    )
+    assert main(["scan", "--input", str(CASE), "--rules", str(RULES), "--expected-manifest-sha256", "bad"]) == 2
+    out = tmp_path / "rep"
+    assert (
+        main(
+            [
+                "report",
+                "--input",
+                str(CASE),
+                "--rules",
+                str(RULES),
+                "--output",
+                str(out),
+                "--expected-manifest-sha256",
+                "0" * 64,
+            ]
+        )
+        == 3
+    )
+    assert not out.exists()
+    # deleting the manifest must not bypass a pinned hash
+    stripped = tmp_path / "stripped"
+    shutil.copytree(CASE, stripped)
+    (stripped / "manifest.json").unlink()
+    assert main(["scan", "--input", str(stripped), "--rules", str(RULES)]) == 0
+    assert main(["scan", "--input", str(stripped), "--rules", str(RULES), "--expected-manifest-sha256", good]) == 3
+
+
 @pytest.mark.skipif(sys.platform != "darwin", reason="live collection needs macOS")
 def test_live_collect_scan_report_verify(tmp_path, capsys):
     assert (

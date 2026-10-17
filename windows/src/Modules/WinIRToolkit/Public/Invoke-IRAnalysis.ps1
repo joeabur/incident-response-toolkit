@@ -16,6 +16,8 @@ function Invoke-IRAnalysis {
         Rules directory (default: shipped rules).
     .PARAMETER Config
         Configuration hashtable.
+    .PARAMETER ExpectedManifestSha256
+        Optional SHA-256 of manifest.json recorded elsewhere at collection time. A mismatch, or a missing manifest, fails verification.
     .PARAMETER AllowUnverified
         Analyse even if manifest verification fails (the failure is recorded in the report).
     .OUTPUTS
@@ -29,7 +31,8 @@ function Invoke-IRAnalysis {
     [OutputType([pscustomobject])]
     param(
         [Parameter(Mandatory)][string]$Path, [string]$IocPath, [string]$BaselinePath, [string]$RulesPath,
-        [System.Collections.IDictionary]$Config, [switch]$AllowUnverified
+        [System.Collections.IDictionary]$Config, [switch]$AllowUnverified,
+        [ValidatePattern('^[0-9a-fA-F]{64}$')][string]$ExpectedManifestSha256
     )
     if (-not $Config) { $Config = Get-IRConfiguration }
     foreach ($p in @(@('evidence', $Path), @('IOC file', $IocPath), @('baseline', $BaselinePath), @('rules', $RulesPath))) {
@@ -38,10 +41,16 @@ function Invoke-IRAnalysis {
     try { $ev = Read-IREvidence -Path $Path } catch { New-IRTerminatingError -Id IRRuntime -Message $_.Exception.Message }
     $verification = $null
     $notes = New-Object 'System.Collections.Generic.List[string]'
-    if ($ev.Manifest) {
-        $verification = Test-IREvidenceManifest -Path $Path
+    $pinned = $PSBoundParameters.ContainsKey('ExpectedManifestSha256')
+    if ($ev.Manifest -or $pinned) {
+        $vArgs = @{ Path = $Path }
+        if ($pinned) { $vArgs.ExpectedManifestSha256 = $ExpectedManifestSha256 }
+        $verification = Test-IREvidenceManifest @vArgs
         if (-not $verification.Ok -and -not $AllowUnverified) {
-            New-IRTerminatingError -Id IRVerificationFailed -Message ("Evidence integrity verification FAILED (modified={0}, missing={1}, unexpected={2}, unsafe={3}). Re-run with -AllowUnverified to analyse anyway." -f @($verification.Modified).Count, @($verification.Missing).Count, @($verification.Unexpected).Count, @($verification.Unsafe).Count)
+            $extra = ''
+            if ($verification.ManifestHashMatch -eq $false) { $extra += ' manifest.json does not match the expected SHA-256.' }
+            if ($verification.Error) { $extra += " $($verification.Error)." }
+            New-IRTerminatingError -Id IRVerificationFailed -Message ("Evidence integrity verification FAILED (modified={0}, missing={1}, unexpected={2}, unsafe={3}).{4} Re-run with -AllowUnverified to analyse anyway." -f @($verification.Modified).Count, @($verification.Missing).Count, @($verification.Unexpected).Count, @($verification.Unsafe).Count, $extra)
         }
     }
     else { $notes.Add('no manifest.json present: integrity could not be verified') }

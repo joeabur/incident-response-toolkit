@@ -28,13 +28,16 @@ SHA-256 manifest, and writes reports. They share one design so that evidence fro
 
 | | Linux | macOS | Windows |
 |---|---|---|---|
-| Automated tests | pytest: run, passing (Linux, Python 3.13) | pytest: run, passing on Linux (macOS-only tests skipped) | 109 unit tests run through the bundled subset runner on PowerShell 7.4 / Linux; **real Pester 5 not run here** |
-| Lint / type checks | Ruff, mypy: run, passing | Ruff, mypy: run, passing | **PSScriptAnalyzer not run here** |
-| Live collection on the target OS | Run on an Ubuntu 24.04 container (root, non-systemd) | **Not run** (no Mac available) | **Not run** (no Windows host available) |
+| Automated tests | pytest: passing locally (Python 3.13) and in CI (Ubuntu x64/arm64, Python 3.11-3.13) | pytest: passing locally on Linux; macOS-only tests passing in CI on `macos-latest` and `macos-15-intel` (Python 3.11-3.13) | 109 unit tests passing locally through the bundled subset runner (PowerShell 7.4 / Linux) and in CI through real Pester on Windows PowerShell 5.1 and PowerShell 7 (Windows, macOS, Ubuntu) |
+| Lint / type checks | Ruff, mypy: passing | Ruff, mypy: passing | PSScriptAnalyzer: passing in CI |
+| Live collection on the target OS | Run on an Ubuntu 24.04 container (root, non-systemd) | Integration tests run on GitHub-hosted macOS runners only; **not tried on a real investigation target or every macOS version** | Integration tests run on GitHub-hosted Windows runners (PowerShell 5.1 and 7) only; **not tried on a real investigation target, other Windows versions or elevated** |
 | Synthetic walkthrough commands | Run | Run (on Linux) | Run (on PowerShell 7 / Linux) |
-| GitHub Actions | Written, not executed | Written, not executed | Written, not executed |
+| GitHub Actions | Executed on the pull request; all jobs green at merge (dependency-review skipped, see below) | Same | Same |
 
 See each toolkit's `docs/security-and-limitations.md` for details and blind spots.
+
+The `dependency-review` jobs are skipped until the repository's dependency graph is enabled and the repository variable
+`DEPENDENCY_REVIEW_ENABLED` is set to `true`; `pip-audit` and secret scanning run regardless.
 
 ## Repository layout
 

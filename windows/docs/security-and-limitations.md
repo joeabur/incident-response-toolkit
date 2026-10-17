@@ -56,8 +56,8 @@ The toolkit never elevates itself. Run specific collectors from an elevated sess
 | Check | Status |
 |---|---|
 | Module import, all collectors against synthetic data sources, rule engine, IOC matching, manifest/verify, reports (JSON/CSV/HTML), schema check, CLI exit codes, demo | **Run** on PowerShell 7.4.6 under Linux (Ubuntu 24.04) using the bundled subset runner: 109 unit tests passed, 4 Windows-only integration tests skipped |
-| Real **Pester 5** execution of `tests/Unit` | **Not run here** (PowerShell Gallery unreachable); configured in CI |
-| **PSScriptAnalyzer** | **Not run here**; configured in CI (`PSScriptAnalyzerSettings.psd1`) |
-| Windows PowerShell 5.1 | **Not run here**; code avoids 7-only syntax (`??`, ternary, `&&`, `-AsHashtable`) but is unverified on 5.1 |
-| Live collection on Windows 10/11 / Server (CIM, `Get-WinEvent`, registry, Authenticode, WMI) | **Not run here** (no Windows host); `tests/Integration` runs on the `windows-latest` CI job |
-| GitHub Actions workflows | Written, **not executed** here |
+| Real **Pester** execution of `tests/Unit` and `tests/Integration` | **Run in CI** (Pester 6.x from the PowerShell Gallery) and passing; not run in the authoring environment |
+| **PSScriptAnalyzer** | **Run in CI** with `PSScriptAnalyzerSettings.psd1` and passing |
+| Windows PowerShell 5.1 | **Run in CI** (`windows-latest`) and passing after fixes; the code avoids 7-only syntax (`??`, ternary, `&&`, `-AsHashtable`) |
+| Live collection on Windows (CIM, `Get-WinEvent`, registry, Authenticode, WMI) | `tests/Integration` passes on the GitHub-hosted `windows-latest` runner (Windows Server, non-elevated Security log reported as partial). **Not tried on Windows 10/11 desktops, other Server versions or elevated sessions** |
+| GitHub Actions workflows | Executed on the pull request; all jobs green at merge |

@@ -9,5 +9,5 @@ Pygments==2.21.0
 pytest==9.1.1
 PyYAML==6.0.3
 ruff==0.17.1
-types-PyYAML==6.0.12.20260906
+types-PyYAML==6.0.12.20261103
 typing_extensions==4.16.0

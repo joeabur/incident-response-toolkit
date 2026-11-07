@@ -12,7 +12,7 @@ license = {text = "MIT"}
 dependencies = ["PyYAML>=6.0,<7"]
 
 [project.optional-dependencies]
-dev = ["pytest>=9,<10", "ruff>=0.6,<1", "mypy>=1.10,<2", "types-PyYAML", "build", "pip-audit"]
+dev = ["pytest>=9,<10", "ruff>=0.6,<1", "mypy>=1.10,<3", "types-PyYAML", "build", "pip-audit"]
 
 [project.scripts]
 linux-ir = "linux_ir.__main__:main"
